@@ -40,6 +40,41 @@
             </div>
             <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Login</button>
         </form>
+        <form action="/login/apple" method="POST" class="mb-8 pb-8 border-b border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">Apple Connect Login</h3>
+                <span class="text-xs text-gray-400">Get ID + Hash from API</span>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2 text-gray-300">Region</label>
+                <select name="region" class="w-full p-2 bg-gray-700 rounded text-white border border-gray-600">
+                    <option value="Global" {% if creds.region != 'EU' %}selected{% endif %}>Global (USA/Asia)</option>
+                    <option value="EU" {% if creds.region == 'EU' %}selected{% endif %}>Europe</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2 text-gray-300">Apple Identity Token</label>
+                <textarea name="identity_token" rows="3" required class="w-full p-2 bg-gray-700 rounded text-white border border-gray-600 font-mono text-xs" placeholder="eyJhbGciOi..."></textarea>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2 text-gray-300">Apple Authorization Code</label>
+                <input type="text" name="authorization_code" required class="w-full p-2 bg-gray-700 rounded text-white border border-gray-600 font-mono text-xs" placeholder="c3c8b2...">
+            </div>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2 mb-6">
+                <div>
+                    <label class="block text-sm font-bold mb-2 text-gray-300">Apple Email (optional)</label>
+                    <input type="email" name="email" class="w-full p-2 bg-gray-700 rounded text-white border border-gray-600 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2 text-gray-300">Full Name (optional)</label>
+                    <input type="text" name="full_name" class="w-full p-2 bg-gray-700 rounded text-white border border-gray-600 text-sm" placeholder="First Last">
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 mb-4">
+                Paste the Apple Connect tokens from your iOS sign-in flow. The API response will return the app user ID and token hash.
+            </p>
+            <button type="submit" class="w-full bg-gray-100 hover:bg-white text-gray-900 font-bold py-2 px-4 rounded">Login with Apple</button>
+        </form>
     {% endif %}
 
     <form action="/settings/device" method="POST" class="mb-8 pb-8 border-b border-gray-700">
