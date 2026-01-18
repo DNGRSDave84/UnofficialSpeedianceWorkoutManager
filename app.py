@@ -233,6 +233,34 @@ def login():
             flash(debug_info, "debug")
         return redirect(url_for('settings'))
 
+@app.route('/login/apple', methods=['POST'])
+def login_apple():
+    identity_token = request.form.get('identity_token')
+    authorization_code = request.form.get('authorization_code') or None
+    apple_user = request.form.get('apple_user') or None
+    region = request.form.get('region', 'Global')
+
+    if not identity_token:
+        flash("Apple identity token required", "error")
+        return redirect(url_for('settings'))
+
+    client.region = region
+    client.host = "euapi.speediance.com" if region == "EU" else "api2.speediance.com"
+    client.base_url = "https://" + client.host
+
+    success, message, debug_info = client.login_with_apple(
+        identity_token=identity_token,
+        authorization_code=authorization_code,
+        apple_user=apple_user,
+    )
+    if success:
+        flash("Apple login successful!", "success")
+        return redirect(url_for('index'))
+    flash(message, "error")
+    if debug_info:
+        flash(debug_info, "debug")
+    return redirect(url_for('settings'))
+
 @app.route('/logout')
 def logout():
     client.logout()
