@@ -131,21 +131,7 @@ class SpeedianceClient:
             return False, str(e)
 
     def login(self, email, password):
-        # Common headers for login requests
-        headers = {
-            "Host": self.host,
-            "User-Agent": "Dart/3.9 (dart:io)",
-            "Content-Type": "application/json",
-            "Timestamp": str(int(time.time() * 1000)),
-            "Utc_offset": "+0000",
-            "Versioncode": "40304",
-            "Mobiledevices": '{"brand":"google","device":"emulator64_x86_64_arm64","deviceType":"sdk_gphone64_x86_64","os":"","os_version":"31","manufacturer":"Google"}',
-            "Timezone": "GMT",
-            "Accept-Language": "en",
-            "App_type": "SOFTWARE",
-            "Connection": "keep-alive",
-            "Accept-Encoding": "gzip, deflate, br"
-        }
+        headers = self._get_login_headers()
 
         # Step 1: Verify Identity
         verify_url = f"{self.base_url}/api/app/v2/login/verifyIdentity"
@@ -191,6 +177,40 @@ class SpeedianceClient:
         except Exception as e:
             return False, "Connection Error", str(e)
 
+    def login_with_apple(self, identity_token, authorization_code, email=None, full_name=None):
+        headers = self._get_login_headers()
+        url = f"{self.base_url}/api/app/v2/login/appleConnect"
+        payload = {
+            "identityToken": identity_token,
+            "authorizationCode": authorization_code,
+        }
+        if email:
+            payload["email"] = email
+        if full_name:
+            payload["fullName"] = full_name
+
+        try:
+            resp = self._request('POST', url, json=payload, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json().get('data', {})
+                token = data.get('token')
+                user_id = data.get('appUserId')
+                if token and user_id:
+                    self.save_config(
+                        str(user_id),
+                        token,
+                        self.region,
+                        self.credentials.get('unit', 0),
+                        self.credentials.get('custom_instruction', ''),
+                        self.credentials.get('device_type', 1),
+                        self.credentials.get('allow_monster_moves', False),
+                    )
+                    return True, "Apple login successful", None
+                return False, "Token or appUserId not found in response", f"Response: {resp.text}"
+            return False, "Apple login failed", f"Status: {resp.status_code}\nResponse: {resp.text}"
+        except Exception as e:
+            return False, "Connection Error", str(e)
+
     def logout(self):
         url = f"{self.base_url}/api/app/login/logout"
         headers = self._get_headers()
@@ -224,6 +244,22 @@ class SpeedianceClient:
             "Mobiledevices": '{"brand":"google","device":"emulator64_x86_64_arm64","deviceType":"sdk_gphone64_x86_64","os":"","os_version":"31","manufacturer":"Google"}',
             "Content-Type": "application/json",
             "User-Agent": "Dart/3.9 (dart:io)"
+        }
+
+    def _get_login_headers(self):
+        return {
+            "Host": self.host,
+            "User-Agent": "Dart/3.9 (dart:io)",
+            "Content-Type": "application/json",
+            "Timestamp": str(int(time.time() * 1000)),
+            "Utc_offset": "+0000",
+            "Versioncode": "40304",
+            "Mobiledevices": '{"brand":"google","device":"emulator64_x86_64_arm64","deviceType":"sdk_gphone64_x86_64","os":"","os_version":"31","manufacturer":"Google"}',
+            "Timezone": "GMT",
+            "Accept-Language": "en",
+            "App_type": "SOFTWARE",
+            "Connection": "keep-alive",
+            "Accept-Encoding": "gzip, deflate, br"
         }
 
     def get_categories(self):
