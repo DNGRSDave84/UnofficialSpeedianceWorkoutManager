@@ -107,6 +107,22 @@ class SpeedianceClient:
         with open(self.config_file, 'w') as f:
             json.dump(self.credentials, f)
 
+    def _get_login_headers(self):
+        return {
+            "Host": self.host,
+            "User-Agent": "Dart/3.9 (dart:io)",
+            "Content-Type": "application/json",
+            "Timestamp": str(int(time.time() * 1000)),
+            "Utc_offset": "+0000",
+            "Versioncode": "40304",
+            "Mobiledevices": '{"brand":"google","device":"emulator64_x86_64_arm64","deviceType":"sdk_gphone64_x86_64","os":"","os_version":"31","manufacturer":"Google"}',
+            "Timezone": "GMT",
+            "Accept-Language": "en",
+            "App_type": "SOFTWARE",
+            "Connection": "keep-alive",
+            "Accept-Encoding": "gzip, deflate, br",
+        }
+
     def update_unit(self, unit):
         """Updates the unit setting on the server (0=Metric, 1=Imperial)"""
         url = f"{self.base_url}/api/app/userinfo"
@@ -131,21 +147,7 @@ class SpeedianceClient:
             return False, str(e)
 
     def login(self, email, password):
-        # Common headers for login requests
-        headers = {
-            "Host": self.host,
-            "User-Agent": "Dart/3.9 (dart:io)",
-            "Content-Type": "application/json",
-            "Timestamp": str(int(time.time() * 1000)),
-            "Utc_offset": "+0000",
-            "Versioncode": "40304",
-            "Mobiledevices": '{"brand":"google","device":"emulator64_x86_64_arm64","deviceType":"sdk_gphone64_x86_64","os":"","os_version":"31","manufacturer":"Google"}',
-            "Timezone": "GMT",
-            "Accept-Language": "en",
-            "App_type": "SOFTWARE",
-            "Connection": "keep-alive",
-            "Accept-Encoding": "gzip, deflate, br"
-        }
+        headers = self._get_login_headers()
 
         # Step 1: Verify Identity
         verify_url = f"{self.base_url}/api/app/v2/login/verifyIdentity"
@@ -188,6 +190,39 @@ class SpeedianceClient:
             else:
                 return False, "Login failed", f"Status: {resp.status_code}\nResponse: {resp.text}"
                 
+        except Exception as e:
+            return False, "Connection Error", str(e)
+
+    def login_with_apple(self, identity_token, authorization_code=None, apple_user=None):
+        headers = self._get_login_headers()
+        payload = {"identityToken": identity_token}
+        if authorization_code:
+            payload["authorizationCode"] = authorization_code
+        if apple_user:
+            payload["user"] = apple_user
+
+        login_url = f"{self.base_url}/api/app/v2/login/apple/connect"
+
+        try:
+            resp = self._request('POST', login_url, json=payload, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json().get('data', {})
+                token = data.get('token')
+                user_id = data.get('appUserId')
+
+                if token and user_id:
+                    self.save_config(
+                        str(user_id),
+                        token,
+                        self.region,
+                        self.credentials.get('unit', 0),
+                        self.credentials.get('custom_instruction', ''),
+                        self.credentials.get('device_type', 1),
+                        self.credentials.get('allow_monster_moves', False),
+                    )
+                    return True, "Apple login successful", None
+                return False, "Token or appUserId not found in response", f"Response: {resp.text}"
+            return False, "Apple login failed", f"Status: {resp.status_code}\nResponse: {resp.text}"
         except Exception as e:
             return False, "Connection Error", str(e)
 
